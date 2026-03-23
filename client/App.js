@@ -11,7 +11,9 @@ import {
   ScrollView,
   SafeAreaView,
   StatusBar,
-  Image
+  Image,
+  Animated,
+  Easing
 } from 'react-native';
 import { io } from 'socket.io-client';
 import { KJUR } from 'jsrsasign';
@@ -36,9 +38,13 @@ export default function App() {
   const socketRef = useRef(null);
   const logScrollRef = useRef(null);
 
-  const [version, setVersion] = useState('1.0.0-stable');
+  const [version, setVersion] = useState('1.1.0-vanguard');
   const [isDeploying, setIsDeploying] = useState(false);
   const rollbackTimer = useRef(null);
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  // HUD Metrics
+  const [metrics, setMetrics] = useState({ cpu: '2.4%', mem: '142MB', bat: '88%' });
 
   useEffect(() => {
     socketRef.current = io(SOCKET_URL);
@@ -113,14 +119,35 @@ export default function App() {
       addLog(`>> Task ${data.task_id} COMPLETED [${data.status}]`);
     });
 
+    const startPulse = () => {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, { toValue: 0.4, duration: 1000, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
+          Animated.timing(pulseAnim, { toValue: 1, duration: 1000, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
+        ])
+      ).start();
+    };
+    startPulse();
+
+    // Metric Simulation (Pro Top Mundial)
+    const metricInterval = setInterval(() => {
+      setMetrics({
+        cpu: `${(Math.random() * 5 + 2).toFixed(1)}%`,
+        mem: `${(Math.random() * 10 + 140).toFixed(0)}MB`,
+        bat: `${(100 - (Date.now() % 10000) / 500).toFixed(0)}%`
+      });
+    }, 2000);
+
     return () => {
       if (socketRef.current) socketRef.current.disconnect();
       if (rollbackTimer.current) clearTimeout(rollbackTimer.current);
+      clearInterval(metricInterval);
     };
   }, []);
 
   const addLog = (log) => {
-    setLogs(prev => [...prev, log].slice(-50)); // Keep last 50 logs
+    const timestamp = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    setLogs(prev => [`[${timestamp}] ${log}`, ...prev].slice(0, 50));
   };
 
   const sendMessage = () => {
@@ -128,6 +155,7 @@ export default function App() {
     const task_id = Date.now().toString();
     
     // UI Update
+    addLog(`>>> TRANSMITTING: ${input.toUpperCase()}`);
     setMessages(prev => [...prev, { id: task_id, text: input, sender: 'user' }]);
     
     // Socket Emit
@@ -140,29 +168,24 @@ export default function App() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
       
-      {/* Header */}
-      <View style={styles.header}>
-        <Image 
-          source={require('./assets/logo.png')} 
-          style={styles.logo} 
-          resizeMode="contain"
-        />
-        <Text style={styles.headerTitle}>{BRAND}</Text>
-        <View style={[styles.statusDot, { backgroundColor: status === 'ONLINE' ? '#00FF41' : '#FF3131' }]} />
-        <Text style={styles.headerStatus}>{status}</Text>
+      {/* Vanguard HUD */}
+      <View style={styles.hudBar}>
+        <View style={styles.hudItem}><Text style={styles.hudLabel}>CPU</Text><Text style={styles.hudValue}>{metrics.cpu}</Text></View>
+        <View style={styles.hudItem}><Text style={styles.hudLabel}>MEM</Text><Text style={styles.hudValue}>{metrics.mem}</Text></View>
+        <View style={styles.hudItem}><Text style={styles.hudLabel}>BAT</Text><Text style={styles.hudValue}>{metrics.bat}</Text></View>
+        <View style={styles.hudItem}><Text style={styles.hudLabel}>VER</Text><Text style={styles.hudValue}>v1.1</Text></View>
       </View>
 
       {/* Matrix Terminal (Logs) */}
       <View style={styles.terminalContainer}>
-        <ScrollView 
-          ref={logScrollRef}
-          onContentSizeChange={() => logScrollRef.current.scrollToEnd({ animated: true })}
+        <View style={styles.scanline} />
+        <FlatList
+          data={logs}
+          keyExtractor={(_, i) => i.toString()}
+          renderItem={({ item }) => <Text style={styles.logText}>{item}</Text>}
+          inverted
           style={styles.terminal}
-        >
-          {logs.map((log, index) => (
-            <Text key={index} style={styles.logText}>{log}</Text>
-          ))}
-        </ScrollView>
+        />
       </View>
 
       {/* Chat Messages */}
@@ -234,33 +257,66 @@ const styles = StyleSheet.create({
     color: '#666',
     fontSize: 12,
   },
+  hudBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    backgroundColor: '#0D0D0D',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1A1A1A',
+  },
+  hudItem: {
+    alignItems: 'center',
+  },
+  hudLabel: {
+    color: '#444',
+    fontSize: 8,
+    fontWeight: 'bold',
+  },
+  hudValue: {
+    color: '#00FF41',
+    fontSize: 10,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
   terminalContainer: {
-    height: 150,
+    height: 180,
     backgroundColor: '#000',
     margin: 10,
-    borderRadius: 8,
+    borderRadius: 4,
     borderWidth: 1,
-    borderColor: '#1A1A1A',
-    padding: 10,
+    borderColor: '#00FF4144',
+    overflow: 'hidden',
+  },
+  scanline: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 2,
+    backgroundColor: '#00FF4111',
+    zIndex: 10,
   },
   terminal: {
-    flex: 1,
+    padding: 8,
   },
   logText: {
     color: '#00FF41',
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     fontSize: 10,
     marginBottom: 2,
+    textShadowColor: '#00FF4188',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 3,
   },
   messageList: {
     flex: 1,
-    padding: 15,
+    padding: 10,
   },
   messageBubble: {
     padding: 12,
     borderRadius: 15,
     marginBottom: 10,
-    maxWidth: '80%',
+    maxWidth: '85%',
   },
   userBubble: {
     alignSelf: 'flex-end',
@@ -270,33 +326,36 @@ const styles = StyleSheet.create({
   },
   agentBubble: {
     alignSelf: 'flex-start',
-    backgroundColor: '#0D0D0D',
+    backgroundColor: '#050505',
     borderWidth: 1,
-    borderColor: '#00FF41',
+    borderColor: '#00FF4166',
   },
   messageText: {
     color: '#E0E0E0',
-    fontSize: 14,
+    fontSize: 13,
   },
   inputArea: {
     flexDirection: 'row',
     padding: 15,
     borderTopWidth: 1,
     borderTopColor: '#1A1A1A',
+    backgroundColor: '#0A0A0A',
   },
   input: {
     flex: 1,
     backgroundColor: '#121212',
     color: '#FFF',
-    borderRadius: 20,
-    paddingHorizontal: 20,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#333',
+    paddingHorizontal: 15,
     paddingVertical: 10,
     fontSize: 14,
     marginRight: 10,
   },
   sendButton: {
     backgroundColor: '#00FF41',
-    borderRadius: 20,
+    borderRadius: 4,
     paddingHorizontal: 20,
     justifyContent: 'center',
   },
