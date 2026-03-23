@@ -168,6 +168,18 @@ export default function App() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
       
+      {/* Header */}
+      <View style={styles.header}>
+        <Image 
+          source={require('./assets/logo.png')} 
+          style={styles.logo} 
+          resizeMode="contain"
+        />
+        <Text style={styles.headerTitle}>{BRAND}</Text>
+        <Animated.View style={[styles.statusDot, { opacity: pulseAnim, backgroundColor: status === 'ONLINE' ? '#00FF41' : '#FF3131' }]} />
+        <Text style={styles.headerStatus}>{status}</Text>
+      </View>
+
       {/* Vanguard HUD */}
       <View style={styles.hudBar}>
         <View style={styles.hudItem}><Text style={styles.hudLabel}>CPU</Text><Text style={styles.hudValue}>{metrics.cpu}</Text></View>
