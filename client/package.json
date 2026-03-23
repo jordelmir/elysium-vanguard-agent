@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "expo": "~55.0.8",
+    "expo-document-picker": "~55.0.9",
+    "expo-file-system": "~55.0.11",
     "expo-status-bar": "~55.0.4",
     "jsrsasign": "^11.1.1",
     "react": "19.2.0",

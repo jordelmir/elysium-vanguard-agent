@@ -1,13 +1,40 @@
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+const cors = require('cors');
 const { spawn } = require('child_process');
 const telemetry = require('./telemetry');
 const crypto = require('crypto');
 const fs = require('fs');
+const path = require('path');
+const multer = require('multer');
 require('dotenv').config();
+
+// Secure Multer Configuration
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadPath = path.join(__dirname, 'nexus_sync');
+    if (!fs.existsSync(uploadPath)) fs.mkdirSync(uploadPath);
+    cb(null, uploadPath);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+const upload = multer({ storage: storage });
 
 const PRIVATE_KEY = fs.readFileSync('/Users/Jorge/.agent-hub/Elysium Vanguard Agent/keys/private.pem');
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Extraction Point (Device -> Mac)
+app.post('/upload', upload.single('vanguard_payload'), (req, res) => {
+  if (!req.file) return res.status(400).send('No payload detected.');
+  console.log(`[${BRAND}] Payload Extracted: ${req.file.filename}`);
+  res.json({ status: 'SUCCESS', resource: req.file.filename });
+});
 
 const server = http.createServer(app);
 const io = new Server(server, {

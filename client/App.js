@@ -11,12 +11,14 @@ import {
   ScrollView,
   SafeAreaView,
   StatusBar,
-  Image,
   Animated,
-  Easing
+  Easing,
+  ActivityIndicator
 } from 'react-native';
 import { io } from 'socket.io-client';
 import { KJUR } from 'jsrsasign';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
 
 const BRAND = 'Elysium Vanguard';
 const SOCKET_URL = 'http://REPLACE_WITH_YOUR_NGROK_URL:4000';
@@ -38,7 +40,7 @@ export default function App() {
   const socketRef = useRef(null);
   const logScrollRef = useRef(null);
 
-  const [version, setVersion] = useState('1.1.0-vanguard');
+  const [version, setVersion] = useState('1.2.0-vanguard');
   const [isDeploying, setIsDeploying] = useState(false);
   const rollbackTimer = useRef(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -164,6 +166,36 @@ export default function App() {
     setInput('');
   };
 
+  const pickAndUploadFile = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: '*/*',
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled) return;
+
+      const file = result.assets[0];
+      const task_id = Date.now().toString();
+      addLog(`[UPLINK] Initiating Extraction: ${file.name} (${(file.size / 1024).toFixed(1)}KB)`);
+
+      const uploadResult = await FileSystem.uploadAsync(`${SOCKET_URL}/upload`, file.uri, {
+        httpMethod: 'POST',
+        uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+        fieldName: 'vanguard_payload',
+      });
+
+      if (uploadResult.status === 200) {
+        const response = JSON.parse(uploadResult.body);
+        addLog(`[SECURE] Extraction SUCCESS: ${response.resource}`);
+      } else {
+        addLog(`[ERROR] Extraction FAILED: Status ${uploadResult.status}`);
+      }
+    } catch (err) {
+      addLog(`[ERROR] Tactical Link Error: ${err.message}`);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
@@ -185,7 +217,7 @@ export default function App() {
         <View style={styles.hudItem}><Text style={styles.hudLabel}>CPU</Text><Text style={styles.hudValue}>{metrics.cpu}</Text></View>
         <View style={styles.hudItem}><Text style={styles.hudLabel}>MEM</Text><Text style={styles.hudValue}>{metrics.mem}</Text></View>
         <View style={styles.hudItem}><Text style={styles.hudLabel}>BAT</Text><Text style={styles.hudValue}>{metrics.bat}</Text></View>
-        <View style={styles.hudItem}><Text style={styles.hudLabel}>VER</Text><Text style={styles.hudValue}>v1.1</Text></View>
+        <View style={styles.hudItem}><Text style={styles.hudLabel}>VER</Text><Text style={styles.hudValue}>v1.2</Text></View>
       </View>
 
       {/* Matrix Terminal (Logs) */}
@@ -217,6 +249,9 @@ export default function App() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.inputArea}
       >
+        <TouchableOpacity style={styles.attachButton} onPress={pickAndUploadFile}>
+          <Text style={styles.attachButtonText}>📎</Text>
+        </TouchableOpacity>
         <TextInput
           style={styles.input}
           value={input}
@@ -375,5 +410,19 @@ const styles = StyleSheet.create({
     color: '#000',
     fontWeight: 'bold',
     fontSize: 12,
+  },
+  attachButton: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 4,
+    width: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#333',
+    marginRight: 10,
+  },
+  attachButtonText: {
+    fontSize: 18,
+    color: '#00FF41',
   },
 });

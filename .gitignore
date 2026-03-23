@@ -15,7 +15,7 @@ android/.gradle/
 *.keystore
 
 # Keys (IMPORTANT: Keep locally unless user wants them on GH)
-# keys/
+keys/
 
 # Logs
 logs/
