@@ -1,0 +1,22 @@
+node_modules/
+.expo/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+
+# Android
+android/app/build/
+android/build/
+android/.gradle/
+*.apk
+*.aar
+*.jks
+*.keystore
+
+# Keys (IMPORTANT: Keep locally unless user wants them on GH)
+# keys/
+
+# Logs
+logs/
+build_error.log

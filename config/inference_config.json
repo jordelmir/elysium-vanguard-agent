@@ -1,0 +1,24 @@
+{
+  "vanguard_brain": {
+    "primary_model": "deepseek-r1:7b-q4_K_M",
+    "provider": "ollama",
+    "parameters": {
+      "temperature": 0,
+      "top_p": 0.9,
+      "repeat_penalty": 1.1,
+      "num_ctx": 32768,
+      "seed": 42
+    }
+  },
+  "log_orchestrator": {
+    "model": "phi-3:mini-4k-instruct",
+    "task": "semantic_filtering",
+    "reasoning_mode": "fast"
+  },
+  "self_healing": {
+    "auto_retry_limit": 3,
+    "rollback_on_failure": true,
+    "thermal_throttle_threshold": 75,
+    "battery_minimum_threshold": 15
+  }
+}
