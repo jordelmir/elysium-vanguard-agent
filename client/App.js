@@ -13,7 +13,8 @@ import {
   StatusBar,
   Animated,
   Easing,
-  ActivityIndicator
+  ActivityIndicator,
+  Image
 } from 'react-native';
 import { io } from 'socket.io-client';
 import { KJUR } from 'jsrsasign';
